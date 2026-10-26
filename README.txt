@@ -5,6 +5,18 @@
 
 HOW TO RUN
   python main.py          (Python 3.8+, no packages needed)
+  Best in a modern terminal with truecolor (Windows Terminal, VS Code,
+  iTerm2, GNOME Terminal...) at 80x24 or bigger.
+
+UI NOTES
+  - Animated title splash, gradient boxed panels, shinobi card dashboard
+  - Battle screen redraws in place: HP bars drain with a ghost trail, the
+    hit target flashes, your screen shakes when hit, damage numbers float up
+  - Every chakra nature has its own jutsu effect; signature / original
+    jutsu get a full-screen flash
+  - Ctrl+C while story text is typing skips to the end of that panel
+  - SHIPPUDEN_FAST=1 python main.py   turns off all animation delays
+    (handy for testing; also automatic when output is piped)
 
 FILE STRUCTURE
   main.py        entry point
@@ -13,7 +25,8 @@ FILE STRUCTURE
   enemy.py       Enemy(Character)          — polymorphic attack()
   item.py        Item.use()
   game.py        game loop, battle, menus, save/load
-  anim.py        animated text / banners
+  anim.py        UI engine: gradient panels, animated title, battle
+                 screen (HP drain, hit flash, jutsu effects), banners
   data.py        clans, jutsu styles, items, missions, ranks
   story/         ONE FILE PER COUNTRY (chapters live here)
     common.py    chapter() builder + boss balance tables
