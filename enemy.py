@@ -13,6 +13,7 @@ class Enemy(Character):
         self._enemy_type: str = enemy_type
         self._exp_reward: int = exp_reward
         self._drop_table      = drop_table
+        self.last_crit: bool  = False
 
     @property
     def enemy_type(self) -> str:
@@ -23,14 +24,12 @@ class Enemy(Character):
         return self._exp_reward
 
     def attack(self, target: Character) -> int:
+        """Deal damage. The battle screen animates it; check last_crit for crits."""
         base    = self._attack_power + random.randint(-3, 3)
         is_crit = random.random() < 0.12
         damage  = max(MIN_DAMAGE, base * 2 if is_crit else base)
         target.hp -= damage
-        if is_crit:
-            print(f"\n  {RED}{BOLD}{self._name} lands a CRITICAL HIT for {damage} damage!{RESET}")
-        else:
-            print(f"\n  {RED}{self._name} attacks for {damage} damage!{RESET}")
+        self.last_crit = is_crit
         return damage
 
     def get_style_name(self) -> str:
