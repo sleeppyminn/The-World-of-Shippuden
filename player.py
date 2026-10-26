@@ -7,6 +7,9 @@ from data import (
     GREEN, YELLOW, CYAN, RED, MAGENTA, RESET, BOLD, DIM, WHITE,
     RARITY_COLORS,
 )
+from anim import (
+    bar, panel, show, level_up_banner, rgb, RARITY_RGB, style_colored, GOLD, SKY,
+)
 
 
 class Player(Character):
@@ -137,7 +140,7 @@ class Player(Character):
         return self._chakra - before
 
     def chakra_bar(self, length: int = 20) -> str:
-        return self._bar(self._chakra, self.max_chakra, length, CYAN)
+        return self._bar(self._chakra, self.max_chakra, length, "chakra")
 
     # ── combat ───────────────────────────────────────────
     def attack(self, target: Character, awakened: bool = False) -> int:
@@ -179,8 +182,7 @@ class Player(Character):
         self._hp            = self._max_hp
         self._attack_power += LEVEL_ATK_BONUS
         self._chakra        = self.max_chakra
-        print(f"\n  {YELLOW}{BOLD}✦ LEVEL UP!  You are now Level {self._level}!{RESET}")
-        print(f"  {GREEN}Max HP +{LEVEL_HP_BONUS}  |  ATK +{LEVEL_ATK_BONUS}  |  HP & chakra restored!{RESET}")
+        level_up_banner(self._level, LEVEL_HP_BONUS, LEVEL_ATK_BONUS)
 
     def add_kill(self, count: int = 1) -> None:
         self._kills += count
@@ -237,25 +239,35 @@ class Player(Character):
         return RANK_NAMES.index(self._rank) if self._rank in RANK_NAMES else 0
 
     # ── display ──────────────────────────────────────────
-    def show_stats(self) -> None:
+    def card_lines(self) -> list:
         info   = CLAN_POOL[self._clan]
-        rcolor = RARITY_COLORS[info["rarity"]]
-        print(f"  {BOLD}{self._name}{RESET}  |  Clan: {rcolor}{self._clan} ({info['rarity']}){RESET}  |  Village: {CYAN}{self._village}{RESET}")
-        print(f"  Rank : {YELLOW}{self._rank}{RESET}  |  Level: {YELLOW}{self._level}{RESET}  |  EXP: {self._exp}/{exp_needed(self._level)}  |  Kills: {self._kills}")
-        print(f"  HP   : {self.hp_bar()}")
-        print(f"  CHK  : {self.chakra_bar()}")
-        print(f"  ATK  : {self.atk}  STR: {self._str}  SPD: {self._spd}  END: {self._end}  |  Gold: {YELLOW}{self._gold}G{RESET}")
-        style = self.get_style_name()
-        line  = f"  Style: {CYAN}{style}{RESET}"
-        if self.awakened:
-            line += f"  |  {YELLOW}{BOLD}✦ AWAKENED{RESET}"
-        if self.custom_jutsu:
-            line += f"  |  Original: {MAGENTA}{self.custom_jutsu[0]}{RESET}"
-        print(line)
-        if self.inventory:
-            print(f"  Bag  : {', '.join(i.name for i in self.inventory)}")
-        else:
-            print(f"  Bag  : {DIM}(empty){RESET}")
+        rcol   = RARITY_RGB[info["rarity"]]
+        w      = 20
+        exp_n  = exp_needed(self._level)
+        stats  = f"{DIM}ATK{RESET} {BOLD}{self.atk}{RESET}  {DIM}STR{RESET} {self._str}  {DIM}SPD{RESET} {self._spd}  {DIM}END{RESET} {self._end}"
+        lines = [
+            f"{BOLD}{self._name}{RESET}  {DIM}·{RESET}  "
+            f"{rgb(*rcol)}{BOLD}{self._clan}{RESET} {DIM}({info['rarity']}){RESET}"
+            f"  {DIM}·{RESET}  {CYAN}{self._village}{RESET}",
+            f"{YELLOW}{self._rank}{RESET}  {DIM}·{RESET}  Lv {YELLOW}{self._level}{RESET}  {DIM}·{RESET}  "
+            f"{self._kills} kills  {DIM}·{RESET}  {YELLOW}{self._gold}G{RESET}",
+            "",
+            f"{self._bar_row('HP ', self.hp, self.max_hp, w, 'hp')}   {stats}",
+            f"{self._bar_row('CHK', self._chakra, self.max_chakra, w, 'chakra')}   "
+            f"{DIM}Style{RESET} {style_colored(self._style, self.get_style_name()) if self._style else DIM + 'none' + RESET}"
+            + (f"  {YELLOW}{BOLD}✦ AWAKENED{RESET}" if self.awakened else ""),
+            f"{self._bar_row('EXP', self._exp, exp_n, w, 'exp')}   "
+            + (f"{DIM}Original{RESET} {MAGENTA}{self.custom_jutsu[0]}{RESET}" if self.custom_jutsu else ""),
+            f"{DIM}Bag{RESET}  " + (", ".join(i.name for i in self.inventory) if self.inventory else f"{DIM}(empty){RESET}"),
+        ]
+        return lines
+
+    @staticmethod
+    def _bar_row(label, cur, mx, w, kind) -> str:
+        return f"{DIM}{label}{RESET} {bar(cur, mx, w, kind)} {BOLD}{int(cur):>3}{RESET}{DIM}/{mx}{RESET}"
+
+    def show_stats(self) -> None:
+        show(panel(self.card_lines(), "SHINOBI CARD", GOLD, SKY))
 
     def __str__(self) -> str:
         return (f"{BOLD}{self._name}{RESET} | Lv.{self._level} {self._rank} "
