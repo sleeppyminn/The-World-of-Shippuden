@@ -1,10 +1,6 @@
-# ═══════════════════════════════════════════════════════
-#  character.py — Abstract base class (OOP: Abstraction,
-#                 Encapsulation, Magic Methods)
-# ═══════════════════════════════════════════════════════
-
 from abc import ABC, abstractmethod
-from data import MIN_DAMAGE, BOLD, RESET, GREEN, YELLOW, RED, CYAN
+from data import MIN_DAMAGE, BOLD, RESET
+from anim import bar_line
 
 
 class Character(ABC):
@@ -77,13 +73,9 @@ class Character(ABC):
         return self._hp > 0
 
     @staticmethod
-    def _bar(cur: int, mx: int, length: int, color: str = None) -> str:
-        ratio  = cur / mx if mx else 0
-        filled = int(ratio * length)
-        bar    = "█" * filled + "░" * (length - filled)
-        if color is None:
-            color = GREEN if ratio > 0.5 else YELLOW if ratio > 0.25 else RED
-        return f"{color}[{bar}]{RESET} {cur}/{mx}"
+    def _bar(cur: int, mx: int, length: int, kind: str = "hp") -> str:
+        """Gradient bar with numbers (see anim.bar)."""
+        return bar_line("", cur, mx, length, kind).lstrip()
 
     def hp_bar(self, length: int = 20) -> str:
         return self._bar(self._hp, self._max_hp, length)
