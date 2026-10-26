@@ -1,0 +1,63 @@
+from .common import chapter as ch, stage, choice
+
+COUNTRY = {
+    "key": "iron", "name": "Land of Iron", "village": "The Samurai Fortress",
+    "home": "Iron", "color": "WHITE",
+    "blurb": "Neutral ground. Where kage meet, samurai watch, and old ghosts settle scores.",
+}
+
+CHAPTERS = [
+    ch("iron_01", "CHAPTER 1 — THE IRON BORDER", "Chunin", 0.5,
+       ["The Land of Iron has no shinobi villages — only samurai, and they do not trust ninja.",
+        "You arrive at the border with a summit invitation. The vanguard has other ideas.",
+        "A line of armoured guards bars the way, spears lowered.",
+        "“No ninja tricks,” their captain barks. “Stand and be judged.”"],
+       "Samurai Vanguard",
+       ["The captain lowers his spear and bows.",
+        "“You fight with honour,” he admits. “Pass.”",
+        "Beyond the gate, mountains glitter with snow."]),
+
+    ch("iron_02", "CHAPTER 2 — THE FIVE KAGE SUMMIT", "Jonin", 0.4,
+       ["For the first time in history, all five Kage meet under one roof.",
+        "Tsunade, A, Onoki, Mei, Gaara — leaders of five proud nations — share one table.",
+        "A strange pale figure slips between them, half black, half white, smiling like a mask.",
+        "“So many leaders,” Zetsu murmurs. “So many throats.”"],
+       "Black Zetsu — Infiltrator",
+       ["Zetsu dissolves into the floor, laughing.",
+        "“Enjoy your peace,” he whispers. “It won’t last.”",
+        "The Kage exchange wary glances. Nothing will ever be simple again."]),
+
+    ch("iron_03", "CHAPTER 3 — DANZO’S FINAL GAMBIT", "ANBU", 0.5,
+       ["Danzo Shimura, the bandaged Root leader, arrives with a single bodyguard and a mountain of ambition.",
+        "He stakes his claim as the next Hokage in front of the whole summit.",
+        "Sasuke Uchiha storms in to kill him — and you are the only one standing between them.",
+        "“Out of my way,” Sasuke says. “I’m here for blood.”"],
+       "Danzo Shimura — Izanagi",
+       ["Danzo’s final Sharingan fades. He collapses into the dirt.",
+        "“For the village,” he rasps. “Always for the village.”",
+        "Sasuke exhales, a shaking, uncertain thing.",
+        "Somewhere, the Leaf’s Hokage must hear that the old shadow has fallen."]),
+
+    ch("iron_04", "CHAPTER 4 — THE GHOST OF THE UCHIHA", "ANBU", 0.9,
+       ["A man in an old battle-armour stands in the summit hall, a war fan on his back.",
+        "He claims to be Madara Uchiha — dead for a hundred years.",
+        "The Kage fall back in fear. Gaara’s sand rises. A’s lightning crackles.",
+        "“I will give you one chance to surrender,” Madara says. “Just one.”"],
+       "Madara Uchiha — Ghost of the Uchiha",
+       ["Madara staggers back, a trace of smile on his lips.",
+        "“So there are some who can still resist,” he says. “Good.”",
+        "He turns away, cloak snapping, and disappears.",
+        "The Alliance knows what is coming. A war is declared."]),
+
+    ch("iron_05", "CHAPTER 5 — MIFUNE’S TRIAL", "Elite Jonin", 0.3,
+       ["General Mifune of the Land of Iron is the only man the Kage trust to lead their united army.",
+        "He offers to train you personally, but first, he asks for a test.",
+        "His katana catches the light, thin as a whisker.",
+        "“Show me,” he says, “how a ninja stands when the world is ending.”"],
+       "Mifune — Samurai General",
+       ["Mifune lowers his blade and nods.",
+        "“You’ll do. I will place you in the Alliance’s inner circle.”",
+        "He hands you a scroll bearing the Kage’s crests.",
+        "You carry it with both hands."],
+       reward="Tsunade's Elixir"),
+]
