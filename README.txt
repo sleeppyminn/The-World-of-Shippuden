@@ -5,6 +5,7 @@
 
 HOW TO RUN
   python main.py          (Python 3.8+, no packages needed)
+  Optional, for the best sound:   pip install pygame
   Best in a modern terminal with truecolor (Windows Terminal, VS Code,
   iTerm2, GNOME Terminal...) at 80x24 or bigger.
 
@@ -18,8 +19,30 @@ UI NOTES
   - SHIPPUDEN_FAST=1 python main.py   turns off all animation delays
     (handy for testing; also automatic when output is piped)
 
+SOUND & MUSIC  (new)
+  5 looping music tracks:  title · village (menus) · story (world map/chapters)
+                           battle (missions) · boss (story fights)
+  41 sound effects: menu clicks, a different sound for each chakra nature
+  (Fire, Water, Wind, Lightning, Earth, Shadow, Taijutsu, Genjutsu), signature/
+  original jutsu charge-ups, hits, crits, dodge, guard, awakening, level-up,
+  victory / defeat / promotion fanfares, gacha clan reveal, shop coins, save chime,
+  and rhythm cues in the training mini-games.
+  - Everything is original and synthesized (taiko, koto, shamisen, shakuhachi-style
+    flute in Japanese scales). No copyrighted music.
+  - Turn music / effects on or off:  main menu [3] Sound, or [S] in the game menu.
+    Your choice is saved in shippuden_audio.json.
+  - Players used, in order: pygame -> Windows built-in (winsound + MCI) ->
+    afplay (macOS) / paplay / aplay / ffplay / play / mpv (Linux).
+    No player found = the game just runs silent.
+  - SHIPPUDEN_MUTE=1 python main.py     start muted
+  - Want to change the sounds?  pip install numpy, edit tools/make_audio.py,
+    run  python tools/make_audio.py   (rewrites everything in assets/)
+
 FILE STRUCTURE
   main.py        entry point
+  audio.py       music + sound effects (backend picker, throttling, settings)
+  assets/        music/*.wav and sfx/*.wav (made by tools/make_audio.py)
+  tools/         make_audio.py — the sound synthesizer
   character.py   Character(ABC)            — abstraction, encapsulation
   player.py      Player(Character)         — chakra, jutsu, ranks
   enemy.py       Enemy(Character)          — polymorphic attack()

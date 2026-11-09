@@ -8,6 +8,7 @@ import textwrap
 import time
 
 from data import RESET, BOLD, DIM, YELLOW, GREEN, RED, CYAN, MAGENTA, BLUE, WHITE
+import audio
 
 TTY  = sys.stdout.isatty()
 FAST = (not TTY) or bool(os.environ.get("SHIPPUDEN_FAST"))
@@ -347,6 +348,7 @@ def story_panel(title, lines, c1=GOLD, c2=None, footer="", delay=0.011) -> None:
     pad = " " * margin(w)
     _LAST_M = margin(w)
     out(pad + top + "\n")
+    audio.sfx("page", gap=0.3)
     skip = FAST
     for ln in wrapped:
         left = f"{pad}{rgb(*c1)}│{RESET} "
@@ -468,14 +470,17 @@ def banner(text, keys, frames=16) -> None:
 
 
 def victory_banner() -> None:
+    audio.sfx("victory")
     banner("VICTORY", [(255, 150, 30), (255, 220, 90), (255, 255, 230)])
 
 
 def defeat_banner() -> None:
+    audio.sfx("defeat")
     banner("DEFEATED", [(120, 20, 30), (235, 70, 80), (255, 140, 130)], 14)
 
 
 def level_up_banner(level, hp_bonus, atk_bonus) -> None:
+    audio.sfx("level_up")
     w = min(pw(), 50)
     inner = w - 4
     title = grad_text("✦  L E V E L   U P  ✦", [GOLD, (255, 255, 255), GOLD])
@@ -621,6 +626,10 @@ def title_splash() -> None:
     clear()
     cursor(False)
     for f in range(total):
+        if f == 0:
+            audio.sfx("title_whoosh")
+        if f == total - hold:
+            audio.sfx("title_boom")
         if f:
             out(f"\033[{H}A")
         out("".join(m + l + "\033[K\n" for l in render(f)))
@@ -647,6 +656,14 @@ def typewrite_center(text, W, delay=0.012):
     out(RESET + "\n")
 
 
+def audio_status() -> str:
+    if not audio.available():
+        return f"{DIM}(no audio device found){RESET}"
+    c = audio.settings()
+    on = lambda v: f"{GREEN}ON{RESET}{DIM}" if v else f"{RED}OFF{RESET}{DIM}"
+    return f"{DIM}♪ {on(c['music'])} · ♫ {on(c['sfx'])}{RESET}"
+
+
 def animated_main_menu() -> None:
     clear()
     t = grad_text("T H E   W O R L D   O F   S H I P P U D E N", _KEY_SH)
@@ -656,6 +673,7 @@ def animated_main_menu() -> None:
     rows = []
     rows += opt(1, "New Game", "Begin a new shinobi's journey")
     rows += opt(2, "Load Game", "Continue from shippuden_save.json")
+    rows += opt(3, "Sound", "Music & effects  " + audio_status())
     rows += opt(0, "Quit")
     show(panel(rows, "MAIN MENU", ORANGE, SKY, width=min(w, 50)))
     say(f"{DIM}Tip: {random.choice(TIPS)}{RESET}")
@@ -674,8 +692,10 @@ def clan_reveal(names, chosen, rarity) -> None:
     for i in range(steps):
         nm = chosen if i == steps - 1 else random.choice(names)
         c = mix((150, 150, 165), col, i / steps)
+        audio.sfx("tick", gap=0.05)
         out("\r" + m + center(f"{rgb(*c)}◂  {BOLD}{nm:^14}{RESET}{rgb(*c)}  ▸{RESET}", w) + "\033[K")
         sleep(0.03 + (i / steps) ** 2 * 0.2)
+    audio.sfx({"Common": "reveal_low", "Uncommon": "reveal_low", "Rare": "reveal_mid"}.get(rarity, "reveal_high"))
     if not FAST:
         for k in range(8):
             c = (255, 255, 255) if k % 2 == 0 else col
@@ -823,6 +843,7 @@ class BattleScreen:
 
     # ── animation primitives ─────────────────────────
     def intro(self, name):
+        audio.sfx("battle_start")
         self.say(f"{BOLD}{name}{RESET} blocks your path!")
         if FAST:
             return
@@ -932,9 +953,13 @@ class BattleScreen:
     def player_attack(self, dmg, style=None, name=None, ult=False, awakened=False):
         self.busy()
         if name:
+            audio.sfx("ult_charge" if ult else "jutsu_" + (style or "").lower())
             self._banner(name, style, ult)
+        else:
+            audio.sfx("slash")
         self._fx(style or "Basic")
         col = STYLE_RGB.get(style, (255, 255, 255))
+        audio.sfx("hit_heavy" if name else "hit")
         self._impact("e", f"-{dmg}", col)
         self._anim_hp("e")
         self._anim_chk()
@@ -948,8 +973,10 @@ class BattleScreen:
 
     def enemy_attack(self, dmg, crit=False, blocked=0):
         self.busy("ENEMY TURN")
+        audio.sfx("enemy_swing")
         self._fx("Enemy", rtl=True)
         text = f"CRITICAL!  -{dmg}" if crit else f"-{dmg}"
+        audio.sfx("crit" if crit else "hurt")
         self._impact("p", text, (255, 215, 90) if crit else (255, 110, 110))
         self._anim_hp("p")
         self._hold()
@@ -964,9 +991,11 @@ class BattleScreen:
 
     def dodge(self):
         self.busy("ENEMY TURN")
+        audio.sfx("enemy_swing")
         if not FAST:
             inner = pw() - 4
             self._fx("Enemy", rtl=True, n=8)
+            audio.sfx("dodge")
             for row in (2, 1, 0):
                 self.arena = self._popup_rows("DODGE!", int(inner * 0.2), row, (110, 230, 255))
                 self._frame(0.05)
@@ -976,6 +1005,8 @@ class BattleScreen:
 
     def guard(self, gained):
         self.busy()
+        audio.sfx("guard")
+        audio.sfx("chakra", gap=0.2)
         if not FAST:
             inner = pw() - 4
             for k in range(4):
@@ -987,6 +1018,7 @@ class BattleScreen:
 
     def awaken(self, name, desc):
         self.busy()
+        audio.sfx("awaken")
         self._banner(name, self.p.style, True)
         self.say(f"{YELLOW}{BOLD}✦ {name.upper()} ✦{RESET}  {DIM}{desc}{RESET}")
         self.say(f"{RED}-10 HP{RESET} · {GREEN}Damage ×2 and free chakra this turn!{RESET}")

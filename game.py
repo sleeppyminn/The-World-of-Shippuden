@@ -13,6 +13,7 @@ from data import (
     ITEMS, SHOP_STOCK, SHOP_PRICES, MISSIONS, GRADUATION_TRIALS,
 )
 import anim
+import audio
 from anim import (
     FAST, GOLD, ORANGE, SKY, LEAF, CRIMSON, VIOLET, PAPER,
     COLOR_RGB, RARITY_RGB, STYLE_RGB,
@@ -37,19 +38,29 @@ def header(title: str, color=None) -> None:
 def pause(msg: str = "ENTER to continue") -> None:
     flush_stdin()
     input(mpad() + f"{DIM}▸ {msg}{RESET} ")
+    audio.sfx("ui_move")
 
 
-def get_valid_input(min_val: int, max_val: int) -> int:
+def get_valid_input(min_val: int, max_val: int, extra=()):
+    """Ask for a number in [min_val, max_val]. `extra` = single letters that are also accepted."""
     flush_stdin()
     pre = mpad()
     while True:
+        raw = input(f"{pre}{rgb(*GOLD)}{BOLD}»{RESET} ").strip().lower()
+        if raw in extra:
+            audio.sfx("ui_select")
+            return raw
         try:
-            choice = int(input(f"{pre}{rgb(*GOLD)}{BOLD}»{RESET} "))
-            if min_val <= choice <= max_val:
-                return choice
-            say(f"Enter a number between {min_val} and {max_val}.", (250, 205, 80))
+            choice = int(raw)
         except ValueError:
+            audio.sfx("ui_error")
             say("Invalid input — please enter a number.", (240, 90, 80))
+            continue
+        if min_val <= choice <= max_val:
+            audio.sfx("ui_back" if choice == 0 else "ui_select")
+            return choice
+        audio.sfx("ui_error")
+        say(f"Enter a number between {min_val} and {max_val}.", (250, 205, 80))
 
 
 def ask_text(prompt: str) -> str:
@@ -71,13 +82,19 @@ class Game:
     #  main flow
     # ═════════════════════════════════════════════════════
     def run(self) -> None:
+        audio.init()
+        audio.music("title")
         title_splash()
         while True:
+            audio.music("title")
             animated_main_menu()
-            choice = get_valid_input(0, 2)
+            choice = get_valid_input(0, 3)
             if choice == 0:
                 say("Believe it. See you next time, shinobi.", (170, 170, 185))
                 break
+            if choice == 3:
+                self._sound_menu()
+                continue
             if choice == 2:
                 if not self._load_game():
                     continue
@@ -94,6 +111,7 @@ class Game:
 
     def game_loop(self) -> None:
         while True:
+            audio.music("village")
             clear()
             header("THE WORLD OF SHIPPUDEN")
             self.player.show_stats()
@@ -102,7 +120,7 @@ class Game:
                 say(f"{DIM}Next rank in {needed} kill(s): {RESET}{YELLOW}{nxt}{RESET}")
             self.display_menu()
             kage = self.player.rank == "Kage-Level"
-            choice = get_valid_input(0, 9 if kage else 8)
+            choice = get_valid_input(0, 9 if kage else 8, extra=("s",))
 
             if   choice == 1: self._mission_board()
             elif choice == 2: self._story_map()
@@ -112,6 +130,7 @@ class Game:
             elif choice == 6: self._visit_shop()
             elif choice == 7: self._show_rank_progress()
             elif choice == 8: self._save_game()
+            elif choice == "s": self._sound_menu()
             elif choice == 9 and kage: self._forge_original_jutsu()
             elif choice == 0:
                 clear()
@@ -135,7 +154,8 @@ class Game:
         right = [mi(5, "Use Item", "your bag"),
                  mi(6, "Shop", "Ichiraku & gear"),
                  mi(7, "Rank Progress", "promotions"),
-                 mi(8, "Save Game", "")]
+                 mi(8, "Save Game", ""),
+                self._mi("S", "Sound", "music & effects", half)]
         if self.player.rank == "Kage-Level":
             left.append(mi(9, "Forge Jutsu", "your own", hot=True))
         right.append(mi(0, "Quit", ""))
@@ -174,6 +194,8 @@ class Game:
         p.awaken_used  = False
         blocking       = False
 
+        before = audio.current()
+        audio.music("boss" if is_story else "battle")
         clear()
         scr = BattleScreen(p, enemy)
         scr.intro(enemy_name)
@@ -255,6 +277,7 @@ class Game:
                     if int(sel) > len(p.inventory):
                         scr.hint = "Invalid — try again."
                         continue
+                    audio.sfx("heal")
                     scr.say(p.use_item(int(sel) - 1))
                     scr.sync()
                     consumed = True
@@ -296,6 +319,7 @@ class Game:
         if p.is_alive():
             p.full_heal()
             p.chakra = p.max_chakra
+            audio.music(None)
             clear()
             victory_banner()
             lines = [f"{GREEN}{BOLD}You defeated {enemy_name}!{RESET}", f"{DIM}HP and chakra restored.{RESET}"]
@@ -309,16 +333,21 @@ class Game:
                 p.add_item(dropped)
                 lines += ["", f"{YELLOW}{BOLD}Item found: {dropped}!{RESET}", f"{DIM}{ITEMS[dropped]['desc']}{RESET}"]
             show(panel(lines, "SPOILS", GOLD, ORANGE, pw()))
+            if not is_story:
+                audio.sfx("coin")
             if not is_story and exp_reward > 0:
                 p.gain_exp(exp_reward)
             pause()
+            audio.music(before or "village")
             return True
 
         p.hp = 0
+        audio.music(None)
         clear()
         defeat_banner()
         say("You were defeated…", (240, 90, 80))
         pause()
+        audio.music(before or "village")
         return False
 
     # ═════════════════════════════════════════════════════
@@ -365,6 +394,7 @@ class Game:
     def _story_map(self) -> None:
         p = self.player
         inner = pw() - 4
+        audio.music("story")
         while True:
             clear()
             header("THE SHINOBI WORLD", LEAF)
@@ -422,6 +452,7 @@ class Game:
             ch = chapters[c - 1]
             reason = self._chapter_locked_reason(chapters, c - 1)
             if reason:
+                audio.sfx("ui_error")
                 say(f"Locked. {reason}", (250, 205, 80))
                 pause()
                 continue
@@ -442,6 +473,7 @@ class Game:
         exp   = int(ch["exp"] * bonus)
         col   = COLOR_RGB.get(country["color"], PAPER)
 
+        audio.sfx("gong")
         if ch.get("stages"):
             won = self._play_multi_stage(ch, col)
         else:
@@ -455,6 +487,7 @@ class Game:
             return
 
         clear()
+        audio.sfx("success")
         header("CHAPTER COMPLETE", (110, 220, 120))
         lines = [f"{GREEN}{BOLD}{ch['title']}{RESET}", ""] + list(ch["victory_lines"])
         story_panel("EPILOGUE", lines, (110, 220, 120), SKY)
@@ -468,6 +501,7 @@ class Game:
                 p.add_item(ch["reward"])
                 rew.append(f"{YELLOW}{BOLD}Reward: {ch['reward']}!{RESET}")
             show(panel(rew, "REWARDS", GOLD, ORANGE, pw()))
+            audio.sfx("coin")
             p.gain_exp(exp)
         else:
             say(f"{DIM}(Replay — no extra rewards.){RESET}")
@@ -536,6 +570,7 @@ class Game:
     # ═════════════════════════════════════════════════════
     def _rank_up_scene(self) -> None:
         clear()
+        audio.sfx("rank_up")
         banner("PROMOTED", [(255, 150, 30), (255, 220, 90), (255, 255, 230)])
         show(panel([f"{YELLOW}{BOLD}You have been promoted to {self.player.rank}!{RESET}",
                     f"{DIM}The village will remember your name.{RESET}"], "PROMOTION", GOLD, ORANGE, pw(), kind="double"))
@@ -559,6 +594,7 @@ class Game:
         p.awakened = True
         p.signature_unlocked = True
         clear()
+        audio.sfx("awaken")
         banner("AWAKENED", [dimc_(scol, .6), scol, (255, 255, 255)])
         story_panel(f"✦ {name.upper()} ✦", [
             desc, "",
@@ -621,6 +657,7 @@ class Game:
         label = {1: "STR", 2: "SPD", 3: "END"}[c]
         passed = {1: self._minigame_strength, 2: self._minigame_speed, 3: self._minigame_endurance}[c]()
 
+        audio.sfx("success" if passed else "fail")
         if passed:
             p.train_stat(stat)
             new_val = getattr(p, "str_stat" if stat == "str" else stat)
@@ -660,9 +697,11 @@ class Game:
                     break
                 say("Enter L, R, U, or D.", (240, 90, 80))
             if ans == expected:
+                audio.sfx("hit_heavy")
                 say(f"{GREEN}✔  Crack!{RESET}")
                 correct += 1
             else:
+                audio.sfx("ui_error")
                 say(f"{RED}✘  The stone holds. (Was: {labels[expected]}){RESET}")
         passed = correct >= 4
         col = (110, 220, 120) if passed else (250, 205, 80)
@@ -681,6 +720,7 @@ class Game:
         for count, cols in (("3", [(255, 80, 80), (255, 160, 100)]), ("2", [(255, 170, 50), (255, 220, 100)]),
                             ("1", [(255, 230, 80), (255, 255, 180)]), ("GO!", [(80, 230, 120), (220, 255, 220)])):
             clear()
+            audio.sfx("success" if count == "GO!" else "ui_select")
             banner(count, cols, 6)
             time.sleep((0.55 if count != "GO!" else 0.1) if not FAST else 0)
         target = random.choice(["RENAN", "JULIANNE", "BENEDICT", "PATRICK", "SIXSEVEN",
@@ -715,6 +755,7 @@ class Game:
         say(f"Watch the rhythm — one pulse every {interval:.0f} seconds.")
         for _ in range(3):
             countdown_bar(interval, "pulse", SKY)
+            audio.sfx("chakra")
             say(f"{rgb(*SKY)}{BOLD}◉ PULSE{RESET}") if not FAST else None
         say(f"Now press ENTER every {interval:.0f} seconds to match it.")
         say(f"{DIM}({rounds} pulses — hit within ±{tolerance}s each time){RESET}")
@@ -724,6 +765,7 @@ class Game:
             start = time.time()
             input(mpad() + f"{DIM}Pulse {i}/{rounds}…{RESET} ")
             elapsed = time.time() - start
+            audio.sfx("chakra")
             if abs(elapsed - interval) <= tolerance:
                 say(f"{GREEN}✔  Perfect pulse ({elapsed:.2f}s){RESET}")
                 passed_rounds += 1
@@ -784,6 +826,7 @@ class Game:
         menu_panel("BAG", entries, GOLD, ORANGE, back="Back")
         c = get_valid_input(0, len(p.inventory))
         if c:
+            audio.sfx("heal")
             say(p.use_item(c - 1))
             pause()
 
@@ -802,8 +845,10 @@ class Game:
             name = SHOP_STOCK[c - 1]
             if p.spend_gold(SHOP_PRICES[name]):
                 p.add_item(name)
+                audio.sfx("coin")
                 say(f"Bought {name}!", (110, 220, 120))
             else:
+                audio.sfx("ui_error")
                 say("Not enough gold.", (240, 90, 80))
             pause()
 
@@ -826,6 +871,33 @@ class Game:
         pause()
 
     # ═════════════════════════════════════════════════════
+    #  sound settings
+    # ═════════════════════════════════════════════════════
+    def _sound_menu(self) -> None:
+        while True:
+            clear()
+            header("SOUND", SKY)
+            c = audio.settings()
+            onoff = lambda v: f"{GREEN}{BOLD}ON{RESET}" if v else f"{RED}{BOLD}OFF{RESET}"
+            head = [f"{DIM}Audio engine:{RESET} {audio.backend_name()}"]
+            if not audio.available():
+                head += [f"{YELLOW}No audio player was found, so the game runs silent.{RESET}",
+                         f"{DIM}Fix: pip install pygame   (Linux: install pulseaudio-utils / alsa-utils){RESET}"]
+            menu_panel("SOUND", [(1, "Music", f"background loops  {onoff(c['music'])}"),
+                                 (2, "Sound effects", f"hits, jutsu, menus  {onoff(c['sfx'])}"),
+                                 (3, "Test", "play a taiko hit")], SKY, VIOLET, head=head)
+            ch = get_valid_input(0, 3)
+            if ch == 0:
+                return
+            if ch == 1:
+                audio.set_music(not c["music"])
+            elif ch == 2:
+                audio.set_sfx(not c["sfx"])
+            else:
+                audio.sfx("title_boom")
+                time.sleep(0.4)
+
+    # ═════════════════════════════════════════════════════
     #  save / load
     # ═════════════════════════════════════════════════════
     def _save_game(self) -> None:
@@ -845,6 +917,7 @@ class Game:
         try:
             with open(self.SAVE_FILE, "w", encoding="utf-8") as f:
                 json.dump(data, f, indent=2, ensure_ascii=False)
+            audio.sfx("save")
             show(panel([f"{GREEN}{BOLD}✦ Game saved{RESET} {DIM}to {self.SAVE_FILE}{RESET}"], "SAVED", (110, 220, 120), SKY, pw()))
         except OSError as e:
             say(f"Save failed: {e}", (240, 90, 80))
@@ -961,6 +1034,7 @@ class Game:
                 say("The proctor lets you retry.", (250, 205, 80))
                 pause()
         clear()
+        audio.sfx("level_up")
         banner("PASSED", [(110, 220, 120), (230, 255, 230)])
         say(f"{GREEN}{BOLD}You pass! The headband is yours.{RESET}")
         pause()
